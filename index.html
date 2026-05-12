@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Soundbox Inventory</title>
+
+<link rel="stylesheet" href="style.css">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Soundbox</h2>
+
+  <button onclick="showPage('importPage')">Nhập liệu</button>
+  <button onclick="showPage('searchPage')">Tra cứu</button>
+  <button onclick="showPage('transferPage')">Chuyển máy</button>
+  <button onclick="showPage('exportPage')">Xuất máy</button>
+  <button onclick="showPage('inventoryPage')">Kiểm kê</button>
+</div>
+
+<div class="content">
+
+<div id="importPage" class="page active">
+
+<h2>Nhập liệu</h2>
+
+<input id="saleName" placeholder="Tên Sale">
+
+<select id="machineType">
+  <option>SB01</option>
+  <option>SB02</option>
+  <option>SB03</option>
+</select>
+
+<button onclick="startScanner()">Bắt đầu scan</button>
+
+<div id="reader"></div>
+
+<table>
+<thead>
+<tr>
+<th>Serial</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+
+<tbody id="scanTable"></tbody>
+
+</table>
+
+</div>
+
+<div id="searchPage" class="page">
+
+<h2>Tra cứu</h2>
+
+<input id="searchSale" placeholder="Tên Sale">
+<input id="searchMachine" placeholder="Loại máy">
+<input id="searchSerial" placeholder="Serial">
+
+<button onclick="searchData()">Tra cứu</button>
+
+<table>
+<thead>
+<tr>
+<th>Ngày</th>
+<th>Sale</th>
+<th>Loại</th>
+<th>Serial</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+
+<tbody id="searchTable"></tbody>
+
+</table>
+
+</div>
+
+<div id="transferPage" class="page">
+
+<h2>Chuyển máy</h2>
+
+<input id="transferSerial" placeholder="Serial">
+<input id="transferSale" placeholder="Sale mới">
+<input id="transferMachine" placeholder="Loại mới">
+
+<button onclick="transferMachine()">Cập nhật</button>
+
+</div>
+
+<div id="exportPage" class="page">
+
+<h2>Xuất máy</h2>
+
+<input type="file" id="excelFile">
+
+<button onclick="uploadExcel()">Upload Excel</button>
+
+</div>
+
+<div id="inventoryPage" class="page">
+
+<h2>Kiểm kê</h2>
+
+<input id="inventorySale" placeholder="Sale">
+<input id="inventoryMachine" placeholder="Loại máy">
+
+<button onclick="loadInventory()">Tải dữ liệu</button>
+
+<button onclick="exportInventoryExcel()">Export Excel</button>
+
+<table>
+<thead>
+<tr>
+<th>Sale</th>
+<th>Loại</th>
+<th>Serial</th>
+</tr>
+</thead>
+
+<tbody id="inventoryTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
