@@ -1,646 +1,378 @@
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
-<title>NGUYỄN MẠNH TUẤN QR SCAN</title>
-
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-
-body{
-    margin:0;
-    padding:15px;
-    background:#f5f5f5;
-    font-family:Arial,sans-serif;
-}
-
-.container{
-    max-width:600px;
-    margin:auto;
-}
-
-h2{
-    text-align:center;
-}
-
-input{
-    width:100%;
-    padding:14px;
-    margin-bottom:15px;
-    border-radius:12px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
-    font-size:16px;
-}
-
-#reader-wrapper{
-    position:relative;
-}
-
-#reader{
-    width:100%;
-    min-height:360px;
-    background:black;
-    border-radius:15px;
-    overflow:hidden;
-}
-
-#focus-box{
-    position:absolute;
-    width:100px;
-    height:100px;
-    border:3px solid yellow;
-    border-radius:12px;
-    display:none;
-    transform:translate(-50%,-50%);
-    pointer-events:none;
-}
-
-/* Thông báo trùng lặp - hiển thị trên camera */
-#overlay-warning{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%, -50%);
-    background:rgba(255, 0, 0, 0.9);
-    color:white;
-    padding:20px 30px;
-    border-radius:15px;
-    font-size:24px;
-    font-weight:bold;
-    display:none;
-    pointer-events:none;
-    z-index:100;
-    box-shadow:0 4px 15px rgba(0,0,0,0.5);
-    animation:pulse 0.5s ease-in-out;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -50%) scale(1.1); }
-}
-
-button{
-    width:100%;
-    padding:15px;
-    margin-top:10px;
-    border:none;
-    border-radius:12px;
-    font-size:16px;
-    font-weight:bold;
-}
-
-.start{
-    background:#28a745;
-    color:white;
-}
-
-.stop{
-    background:#ff9800;
-    color:white;
-}
-
-.copy{
-    background:#007bff;
-    color:white;
-}
-
-.clear{
-    background:#dc3545;
-    color:white;
-}
-
-textarea{
-    width:100%;
-    height:220px;
-    margin-top:15px;
-    padding:10px;
-    border-radius:12px;
-    box-sizing:border-box;
-    font-size:16px;
-}
-
-.scan-count{
-    margin-top:10px;
-    text-align:center;
-    font-size:18px;
-    font-weight:bold;
-}
-
-#warning{
-    margin-top:10px;
-    text-align:center;
-    font-size:20px;
-    color:red;
-    font-weight:bold;
-    display:none;
-}
-
-#status{
-    margin-top:10px;
-    text-align:center;
-    font-size:15px;
-    font-weight:bold;
-}
-
-.info{
-    text-align:center;
-    margin-top:10px;
-    color:#666;
-    font-size:14px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container">
-
-<h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
-
-<input
-type="text"
-id="saleInput"
-placeholder="Nhập Sale">
-
-<div id="reader-wrapper">
-
-    <div id="reader"></div>
-
-    <div id="focus-box"></div>
-
-    <!-- Thông báo trùng lặp hiển thị trên camera -->
-    <div id="overlay-warning">MÃ QR ĐÃ TỒN TẠI</div>
-
-</div>
-
-<div class="scan-count">
-Tổng scan:
-<span id="count">0</span>
-</div>
-
-<div id="status"></div>
-
-<button class="start"
-onclick="startScanner()">
-Start Scanner
-</button>
-
-<button class="stop"
-onclick="stopScanner()">
-Stop Scanner
-</button>
-
-<button class="copy"
-onclick="copyList()">
-Copy List
-</button>
-
-<button class="clear"
-onclick="clearList()">
-Clear List
-</button>
-
-<textarea
-id="resultList"
-placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
-
-<div class="info">
-Được viết bởi Nguyễn Mạnh Tuấn
-</div>
-
-</div>
-
-<script>
-
-const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
-
-let scannedList = [];
-
-let html5QrCode = null;
-
-let scannerRunning = false;
-
-let lastScanTime = 0;
-
-async function startScanner(){
-
-    const sale =
-        document.getElementById(
-            "saleInput"
-        ).value.trim();
-
-    if(!sale){
-
-        alert(
-            "BẠN CHƯA NHẬP TÊN SALE"
-        );
-
-        return;
-    }
-
-    if(scannerRunning){
-        return;
-    }
-
-    try{
-
-        html5QrCode =
-            new Html5Qrcode(
-                "reader"
-            );
-
-        await html5QrCode.start(
-
-            {
-                facingMode:{
-                    ideal:"environment"
-                }
-            },
-
-            {
-                fps:30,
-
-                qrbox:function(w,h){
-
-                    return{
-                        width:
-                            Math.floor(
-                                w * 0.9
-                            ),
-
-                        height:
-                            Math.floor(
-                                h * 0.32
-                            )
-                    };
-                },
-
-                aspectRatio:1.777,
-
-                disableFlip:false,
-
-                formatsToSupport:[
-
-                    Html5QrcodeSupportedFormats.QR_CODE,
-
-                    Html5QrcodeSupportedFormats.CODE_128,
-
-                    Html5QrcodeSupportedFormats.CODE_39,
-
-                    Html5QrcodeSupportedFormats.CODE_93,
-
-                    Html5QrcodeSupportedFormats.EAN_13,
-
-                    Html5QrcodeSupportedFormats.EAN_8,
-
-                    Html5QrcodeSupportedFormats.UPC_A,
-
-                    Html5QrcodeSupportedFormats.UPC_E,
-
-                    Html5QrcodeSupportedFormats.ITF,
-
-                    Html5QrcodeSupportedFormats.MSI,
-
-                    Html5QrcodeSupportedFormats.CODABAR,
-
-                    Html5QrcodeSupportedFormats.GS1_DATABAR,
-
-                    Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
-
-                    Html5QrcodeSupportedFormats.DATA_MATRIX,
-
-                    Html5QrcodeSupportedFormats.AZTEC,
-
-                    Html5QrcodeSupportedFormats.PDF_417
-                ],
-
-                videoConstraints:{
-
-                    facingMode:{
-                        ideal:"environment"
-                    },
-
-                    width:{
-                        ideal:1920
-                    },
-
-                    height:{
-                        ideal:1080
-                    },
-
-                    advanced:[
-
-                        {
-                            focusMode:
-                                "continuous"
-                        },
-
-                        {
-                            zoom:1.5
-                        }
-                    ]
-                },
-
-                experimentalFeatures:{
-                    useBarCodeDetectorIfSupported:true
-                }
-            },
-
-            async function(
-                decodedText,
-                decodedResult
-            ){
-
-                const now =
-                    Date.now();
-
-                if(
-                    now - lastScanTime
-                    < 1000
-                ){
-                    return;
-                }
-
-                lastScanTime = now;
-
-                if(
-                    scannedList.includes(
-                        decodedText
-                    )
-                ){
-
-                    showDuplicateWarning();
-
-                    navigator.vibrate?.(
-                        [200,100,200]
-                    );
-
-                    return;
-                }
-
-                scannedList.push(
-                    decodedText
-                );
-
-                document.getElementById(
-                    "resultList"
-                ).value =
-                scannedList.join("\n");
-
-                document.getElementById(
-                    "count"
-                ).innerText =
-                scannedList.length;
-
-                navigator.vibrate?.(100);
-
-                flashEffect();
-
-                let scanType =
-                    "BARCODE";
-
-                if(
-                    decodedResult.result
-                    .format
-                    .formatName
-                    === "QR_CODE"
-                ){
-                    scanType = "QR";
-                }
-
-                await autoSendToSheet(
-                    decodedText,
-                    scanType
-                );
-            }
-        );
-
-        scannerRunning = true;
-
-        setupTapFocus();
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Lỗi camera:\n" + err
-        );
-    }
-}
-
-async function autoSendToSheet(
-    code,
-    type
-){
-
-    try{
-
-        const sale =
-            document.getElementById(
-                "saleInput"
-            ).value.trim();
-
-        if(!sale){
-
-            setStatus(
-                "Chưa nhập Sale"
-            );
-
-            return;
-        }
-
-        setStatus(
-            "Đang gửi: " + code
-        );
-
-        const url =
-            GOOGLE_SCRIPT_URL +
-
-            "?sale=" +
-
-            encodeURIComponent(
-                sale
-            )
-
-            +
-
-            "&code=" +
-
-            encodeURIComponent(
-                code
-            )
-
-            +
-
-            "&type=" +
-
-            encodeURIComponent(
-                type
-            );
-
-        await fetch(
-            url,
-            {
-                method:"GET",
-                mode:"no-cors",
-                cache:"no-cache"
-            }
-        );
-
-        setStatus(
-            "Đã gửi: " + code
-        );
-
-    }catch(err){
-
-        console.error(err);
-
-        setStatus(
-            "Lỗi gửi dữ liệu"
-        );
-    }
-}
-
-async function stopScanner(){
-
-    if(
-        html5QrCode &&
-        scannerRunning
-    ){
-
-        await html5QrCode.stop();
-
-        await html5QrCode.clear();
-
-        scannerRunning = false;
-    }
-}
-
-function copyList(){
-
-    navigator.clipboard.writeText(
-        document.getElementById(
-            "resultList"
-        ).value
-    );
-
-    alert("Đã copy");
-}
-
-function clearList(){
-
-    scannedList = [];
-
-    document.getElementById(
-        "resultList"
-    ).value = "";
-
-    document.getElementById(
-        "count"
-    ).innerText = 0;
-
-    setStatus("");
-}
-
-function setStatus(text){
-
-    document.getElementById(
-        "status"
-    ).innerText = text;
-}
-
-// Cải thiện: Hiển thị thông báo trên camera
-function showDuplicateWarning(){
-
-    const overlayWarning =
-        document.getElementById(
-            "overlay-warning"
-        );
-
-    overlayWarning.style.display =
-        "block";
-
-    setTimeout(() => {
-
-        overlayWarning.style.display =
-            "none";
-
-    }, 1500);
-}
-
-function flashEffect(){
-
-    document.body.style.opacity =
-        "0.9";
-
-    setTimeout(() => {
-
-        document.body.style.opacity =
-            "1";
-
-    }, 100);
-}
-
-function setupTapFocus(){
-
-    const wrapper =
-        document.getElementById(
-            "reader-wrapper"
-        );
-
-    const focusBox =
-        document.getElementById(
-            "focus-box"
-        );
-
-    wrapper.addEventListener(
-        "click",
-        function(e){
-
-            const rect =
-                wrapper
-                .getBoundingClientRect();
-
-            const x =
-                e.clientX - rect.left;
-
-            const y =
-                e.clientY - rect.top;
-
-            focusBox.style.left =
-                x + "px";
-
-            focusBox.style.top =
-                y + "px";
-
-            focusBox.style.display =
-                "block";
-
-            setTimeout(() => {
-
-                focusBox.style.display =
-                    "none";
-
-            }, 700);
-
-            navigator.vibrate?.(30);
-        }
-    );
-}
-
-</script>
-
-</body>
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
+ <script src="https://unpkg.com/html5-qrcode"></script>
+ <style>
+ body{
+     margin:0;
+     padding:15px;
+     background:#f5f5f5;
+     font-family:Arial,sans-serif;
+ }
+ .container{
+     max-width:600px;
+     margin:auto;
+ }
+ h2{
+     text-align:center;
+ }
+ input{
+     width:100%;
+     padding:14px;
+     margin-bottom:15px;
+     border-radius:12px;
+     border:1px solid #ccc;
+     box-sizing:border-box;
+     font-size:16px;
+ }
+ #reader-wrapper{
+     position:relative;
+ }
+ #reader{
+     width:100%;
+     min-height:360px;
+     background:black;
+     border-radius:15px;
+     overflow:hidden;
+ }
+ #focus-box{
+     position:absolute;
+     width:100px;
+     height:100px;
+     border:3px solid yellow;
+     border-radius:12px;
+     display:none;
+     transform:translate(-50%,-50%);
+     pointer-events:none;
+ }
+
+ /* Bộ đếm QR hiển thị trên camera */
+ #scan-counter{
+     position:absolute;
+     top:20px;
+     right:20px;
+     background:rgba(255, 0, 0, 0.85);
+     color:white;
+     padding:15px 25px;
+     border-radius:12px;
+     font-size:28px;
+     font-weight:bold;
+     display:none;
+     pointer-events:none;
+     z-index:100;
+     box-shadow:0 4px 15px rgba(0,0,0,0.5);
+     min-width:80px;
+     text-align:center;
+ }
+
+ /* Thông báo trùng lặp - hiển thị trên camera */
+ #overlay-warning{
+     position:absolute;
+     top:50%;
+     left:50%;
+     transform:translate(-50%, -50%);
+     background:rgba(255, 0, 0, 0.9);
+     color:white;
+     padding:20px 30px;
+     border-radius:15px;
+     font-size:24px;
+     font-weight:bold;
+     display:none;
+     pointer-events:none;
+     z-index:100;
+     box-shadow:0 4px 15px rgba(0,0,0,0.5);
+     animation:pulse 0.5s ease-in-out;
+ }
+ @keyframes pulse {
+     0%, 100% { transform: translate(-50%, -50%) scale(1); }
+     50% { transform: translate(-50%, -50%) scale(1.1); }
+ }
+
+ button{
+     width:100%;
+     padding:15px;
+     margin-top:10px;
+     border:none;
+     border-radius:12px;
+     font-size:16px;
+     font-weight:bold;
+ }
+ .start{
+     background:#28a745;
+     color:white;
+ }
+ .stop{
+     background:#ff9800;
+     color:white;
+ }
+ .copy{
+     background:#007bff;
+     color:white;
+ }
+ .clear{
+     background:#dc3545;
+     color:white;
+ }
+ textarea{
+     width:100%;
+     height:220px;
+     margin-top:15px;
+     padding:10px;
+     border-radius:12px;
+     box-sizing:border-box;
+     font-size:16px;
+ }
+ .scan-count{
+     margin-top:10px;
+     text-align:center;
+     font-size:18px;
+     font-weight:bold;
+ }
+ #warning{
+     margin-top:10px;
+     text-align:center;
+     font-size:20px;
+     color:red;
+     font-weight:bold;
+     display:none;
+ }
+ #status{
+     margin-top:10px;
+     text-align:center;
+     font-size:15px;
+     font-weight:bold;
+ }
+ .info{
+     text-align:center;
+     margin-top:10px;
+     color:#666;
+     font-size:14px;
+ }
+ </style>
+ </head>
+ <body>
+ <div class="container">
+ <h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
+ <input type="text" id="saleInput" placeholder="Nhập Sale">
+ <div id="reader-wrapper">
+     <div id="reader"></div>
+     <div id="focus-box"></div>
+     <!-- Bộ đếm QR hiển thị trên camera -->
+     <div id="scan-counter">0</div>
+     <!-- Thông báo trùng lặp hiển thị trên camera -->
+     <div id="overlay-warning">MÃ QR ĐÃ TỒN TẠI</div>
+ </div>
+ <div class="scan-count"> Tổng scan: <span id="count">0</span> </div>
+ <div id="status"></div>
+ <button class="start" onclick="startScanner()"> Start Scanner </button>
+ <button class="stop" onclick="stopScanner()"> Stop Scanner </button>
+ <button class="copy" onclick="copyList()"> Copy List </button>
+ <button class="clear" onclick="clearList()"> Clear List </button>
+ <textarea id="resultList" placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
+ <div class="info"> Được viết bởi Nguyễn Mạnh Tuấn </div>
+ </div>
+ <script>
+ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
+ let scannedList = [];
+ let html5QrCode = null;
+ let scannerRunning = false;
+ let lastScanTime = 0;
+
+ async function startScanner(){
+     const sale = document.getElementById("saleInput").value.trim();
+     if(!sale){
+         alert("BẠN CHƯA NHẬP TÊN SALE");
+         return;
+     }
+     if(scannerRunning){
+         return;
+     }
+     try{
+         html5QrCode = new Html5Qrcode("reader");
+         await html5QrCode.start(
+             {
+                 facingMode:{
+                     ideal:"environment"
+                 }
+             },
+             {
+                 fps:30,
+                 qrbox:function(w,h){
+                     return{
+                         width:Math.floor(w * 0.9),
+                         height:Math.floor(h * 0.32)
+                     };
+                 },
+                 aspectRatio:1.777,
+                 disableFlip:false,
+                 formatsToSupport:[
+                     Html5QrcodeSupportedFormats.QR_CODE,
+                     Html5QrcodeSupportedFormats.CODE_128,
+                     Html5QrcodeSupportedFormats.CODE_39,
+                     Html5QrcodeSupportedFormats.CODE_93,
+                     Html5QrcodeSupportedFormats.EAN_13,
+                     Html5QrcodeSupportedFormats.EAN_8,
+                     Html5QrcodeSupportedFormats.UPC_A,
+                     Html5QrcodeSupportedFormats.UPC_E,
+                     Html5QrcodeSupportedFormats.ITF,
+                     Html5QrcodeSupportedFormats.MSI,
+                     Html5QrcodeSupportedFormats.CODABAR,
+                     Html5QrcodeSupportedFormats.GS1_DATABAR,
+                     Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
+                     Html5QrcodeSupportedFormats.DATA_MATRIX,
+                     Html5QrcodeSupportedFormats.AZTEC,
+                     Html5QrcodeSupportedFormats.PDF_417
+                 ],
+                 videoConstraints:{
+                     facingMode:{
+                         ideal:"environment"
+                     },
+                     width:{
+                         ideal:1920
+                     },
+                     height:{
+                         ideal:1080
+                     },
+                     advanced:[
+                         {
+                             focusMode:"continuous"
+                         },
+                         {
+                             zoom:1.5
+                         }
+                     ]
+                 },
+                 experimentalFeatures:{
+                     useBarCodeDetectorIfSupported:true
+                 }
+             },
+             async function(decodedText, decodedResult){
+                 const now = Date.now();
+                 if(now - lastScanTime < 1000){
+                     return;
+                 }
+                 lastScanTime = now;
+
+                 // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
+                 if(scannedList.includes(decodedText)){
+                     showDuplicateWarning();
+                     navigator.vibrate?.([200,100,200]);
+                     return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
+                 }
+
+                 // ✅ THÊM VÀO DANH SÁCH
+                 scannedList.push(decodedText);
+                 document.getElementById("resultList").value = scannedList.join("\n");
+                 document.getElementById("count").innerText = scannedList.length;
+                 document.getElementById("scan-counter").innerText = scannedList.length;
+                 
+                 navigator.vibrate?.(100);
+                 flashEffect();
+
+                 let scanType = "BARCODE";
+                 if(decodedResult.result.format.formatName === "QR_CODE"){
+                     scanType = "QR";
+                 }
+
+                 // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
+                 await autoSendToSheet(decodedText, scanType);
+             }
+         );
+
+         scannerRunning = true;
+         // Hiển thị bộ đếm
+         document.getElementById("scan-counter").style.display = "block";
+         setupTapFocus();
+     }catch(err){
+         console.error(err);
+         alert("Lỗi camera:\n" + err);
+     }
+ }
+
+ async function autoSendToSheet(code, type){
+     try{
+         const sale = document.getElementById("saleInput").value.trim();
+         if(!sale){
+             setStatus("Chưa nhập Sale");
+             return;
+         }
+         setStatus("Đang gửi: " + code);
+         const url = GOOGLE_SCRIPT_URL +
+             "?sale=" + encodeURIComponent(sale) +
+             "&code=" + encodeURIComponent(code) +
+             "&type=" + encodeURIComponent(type);
+         await fetch(url, {
+             method:"GET",
+             mode:"no-cors",
+             cache:"no-cache"
+         });
+         setStatus("Đã gửi: " + code);
+     }catch(err){
+         console.error(err);
+         setStatus("Lỗi gửi dữ liệu");
+     }
+ }
+
+ async function stopScanner(){
+     if(html5QrCode && scannerRunning){
+         await html5QrCode.stop();
+         await html5QrCode.clear();
+         scannerRunning = false;
+         document.getElementById("scan-counter").style.display = "none";
+     }
+ }
+
+ function copyList(){
+     navigator.clipboard.writeText(document.getElementById("resultList").value);
+     alert("Đã copy");
+ }
+
+ function clearList(){
+     scannedList = [];
+     document.getElementById("resultList").value = "";
+     document.getElementById("count").innerText = 0;
+     document.getElementById("scan-counter").innerText = 0;
+     setStatus("");
+ }
+
+ function setStatus(text){
+     document.getElementById("status").innerText = text;
+ }
+
+ function showDuplicateWarning(){
+     const overlayWarning = document.getElementById("overlay-warning");
+     overlayWarning.style.display = "block";
+     setTimeout(() => {
+         overlayWarning.style.display = "none";
+     }, 1500);
+ }
+
+ function flashEffect(){
+     document.body.style.opacity = "0.9";
+     setTimeout(() => {
+         document.body.style.opacity = "1";
+     }, 100);
+ }
+
+ function setupTapFocus(){
+     const wrapper = document.getElementById("reader-wrapper");
+     const focusBox = document.getElementById("focus-box");
+     wrapper.addEventListener("click", function(e){
+         const rect = wrapper.getBoundingClientRect();
+         const x = e.clientX - rect.left;
+         const y = e.clientY - rect.top;
+         focusBox.style.left = x + "px";
+         focusBox.style.top = y + "px";
+         focusBox.style.display = "block";
+         setTimeout(() => {
+             focusBox.style.display = "none";
+         }, 700);
+         navigator.vibrate?.(30);
+     });
+ }
+ </script>
+ </body>
 </html>
